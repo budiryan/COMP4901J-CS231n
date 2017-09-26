@@ -292,6 +292,9 @@ class TwoLayerNetLeaky(object):
     self.params['W2'] = std * np.random.randn(hidden_size, output_size)
     self.params['b2'] = np.zeros(output_size)
     self.leaky_alpha = leaky_alpha
+    self.leaky_foward_pass = np.vectorize(lambda x: leaky_alpha * x if x <= 0 else x)
+    self.leaky_backward_pass = np.vectorize(lambda x: 1 if x > 0 else leaky_alpha)
+
 
   def loss(self, X, y=None, reg=0.0):
     """
@@ -331,8 +334,7 @@ class TwoLayerNetLeaky(object):
     #############################################################################
     h = X.dot(W1) + b1
     # Leaky ReLU
-    leaky_relu = np.vectorize(lambda x: leaky_alpha * x if x <= 0 else x)
-    h = leaky_relu(h)
+    h = self.leaky_foward_pass(h)
 
     scores = h.dot(W2) + b2
     #############################################################################
@@ -386,9 +388,7 @@ class TwoLayerNetLeaky(object):
 
     # apply the derivative of Leaky ReLU
     d_hidden = d_output.dot(W2.T)
-    # d_hidden = d_hidden * (h > 0)
-    gradient_multiplier_leaky_relu = np.vectorize(lambda x: 1 if x > 0 else leaky_alpha)
-    gradient_leaky_relu = gradient_multiplier_leaky_relu(h)
+    gradient_leaky_relu = self.leaky_backward_pass(h)
     d_hidden = d_hidden * gradient_leaky_relu
 
     grads['b1'] = np.sum(d_hidden, axis=0)
