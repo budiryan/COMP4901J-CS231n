@@ -334,7 +334,8 @@ class TwoLayerNetLeaky(object):
     #############################################################################
     h = X.dot(W1) + b1
     # Leaky ReLU
-    h = self.leaky_foward_pass(h)
+    # h = self.leaky_foward_pass(h)
+    h = np.maximum(leaky_alpha * h, h)
 
     scores = h.dot(W2) + b2
     #############################################################################
@@ -388,8 +389,9 @@ class TwoLayerNetLeaky(object):
 
     # apply the derivative of Leaky ReLU
     d_hidden = d_output.dot(W2.T)
-    gradient_leaky_relu = self.leaky_backward_pass(h)
-    d_hidden = d_hidden * gradient_leaky_relu
+    # gradient_leaky_relu = self.leaky_backward_pass(h)
+    # d_hidden = d_hidden * gradient_leaky_relu
+    d_hidden = d_hidden * ((h > 0) * (1 - leaky_alpha) + leaky_alpha)
 
     grads['b1'] = np.sum(d_hidden, axis=0)
     grads['W1'] = X.T.dot(d_hidden)
