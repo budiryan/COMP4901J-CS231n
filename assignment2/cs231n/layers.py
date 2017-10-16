@@ -172,7 +172,26 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # variance, storing your result in the running_mean and running_var   #
         # variables.                                                          #
         #######################################################################
-        pass
+        # normalize
+        mean = np.sum(x, axis=0) / N
+        xmean = x - mean
+
+        xmean_squared = xmean ** 2
+        var = np.sum(xmean_squared, axis=0) / N
+
+        sqrt_var = np.sqrt(var + eps)
+
+        xhat = xmean / sqrt_var
+
+        # transform
+        out = beta + gamma * xhat
+
+        # update running mean & running var
+        running_mean = momentum * running_mean + (1 - momentum) * mean
+        running_var = momentum * running_var + (1 - momentum) * var
+
+        cache = (mean, xmean, xmean_squared, var, sqrt_var, xhat, gamma, eps)
+
         #######################################################################
         #                           END OF YOUR CODE                          #
         #######################################################################
@@ -183,7 +202,14 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # then scale and shift the normalized data using gamma and beta.      #
         # Store the result in the out variable.                               #
         #######################################################################
-        pass
+        # normalize
+        xmean = x - running_mean
+        xmean_squared = xmean ** 2
+        sqrt_var = np.sqrt(running_var + eps)
+        xhat = xmean / sqrt_var
+
+        # transform
+        out = beta + gamma * xhat
         #######################################################################
         #                          END OF YOUR CODE                           #
         #######################################################################
@@ -219,7 +245,27 @@ def batchnorm_backward(dout, cache):
     # TODO: Implement the backward pass for batch normalization. Store the    #
     # results in the dx, dgamma, and dbeta variables.                         #
     ###########################################################################
-    pass
+    mean, xmean, xmean_squared, var, sqrt_var, xhat, gamma, eps = cache
+    N, D = dout.shape
+
+    dbeta = np.sum(dout, axis=0)
+    dgamma = np.sum(xhat * dout, axis=0)
+
+    # top pipeline
+    d_xhat = gamma * dout
+    d_xmean_1 = d_xhat / sqrt_var
+
+    # bottom pipeline
+    d_sqrt_var = np.sum(((-1 * xmean) / (sqrt_var ** 2)) * d_xhat, axis=0)
+    d_var = d_sqrt_var * (1 / (2 * np.sqrt(var + eps)))
+    d_xmean_squared = d_var * (1. / N) * np.ones((N, D))
+    d_xmean_2 = 2 * d_xmean_squared * xmean
+
+    # merge
+    d_mean = -1 * np.sum((d_xmean_1 + d_xmean_2), axis=0)
+    d_x_1 = d_xmean_1 + d_xmean_2
+    d_x_2 = d_mean * (1. / N) * np.ones((N, D))
+    dx = d_x_1 + d_x_2
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -249,7 +295,11 @@ def batchnorm_backward_alt(dout, cache):
     # should be able to compute gradients with respect to the inputs in a     #
     # single statement; our implementation fits on a single 80-character line.#
     ###########################################################################
-    pass
+    mean, xmean, xmean_squared, var, sqrt_var, xhat, gamma, eps = cache
+    N, D = dout.shape
+    dbeta = np.sum(dout, axis=0)
+    dgamma = np.sum(xhat * dout, axis=0)
+
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -363,7 +413,6 @@ def conv_forward_naive(x, w, b, conv_param):
     ###########################################################################
     num_stride = conv_param['stride']
     num_pad = conv_param['pad']
-    # x_pad = np.pad(x, num_pad, 'constant', constant_values=(0))
     N, C, H, W = x.shape
     F, HH, WW = w.shape[0], w.shape[2], w.shape[3]
     H_out = int(1 + (H + 2 * num_pad - HH) / num_stride)
