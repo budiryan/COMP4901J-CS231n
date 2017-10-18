@@ -104,3 +104,28 @@ def conv_relu_pool_backward(dout, cache):
     da = relu_backward(ds, relu_cache)
     dx, dw, db = conv_backward_fast(da, conv_cache)
     return dx, dw, db
+
+
+def affine_bn_relu_forward(x , w , b, gamma, beta, bn_param):
+    """
+    Sandwich layer for affine-bn-relu forward pass
+    """
+    a, fc_cache = affine_forward(x, w, b)
+    bn, bn_cache = batchnorm_forward(a, gamma, beta, bn_param)
+    out, relu_cache = relu_forward(bn)
+    cache = (fc_cache, bn_cache, relu_cache)
+    return out, cache
+
+
+def affine_bn_relu_backward(dout, cache):
+    """
+    Sandwich layer for affine-bn-relu backward pass
+    """
+    fc_cache, bn_cache, relu_cache = cache
+    # print('dout: ', dout)
+    dbn = relu_backward(dout, relu_cache)
+    # print('dbn: ', dbn)
+    da, dgamma, dbeta = batchnorm_backward(dbn, bn_cache)
+    # print('da: ', da)
+    dx, dw, db = affine_backward(da, fc_cache)
+    return dx, dw, db, dgamma, dbeta

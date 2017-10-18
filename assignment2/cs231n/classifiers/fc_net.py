@@ -192,14 +192,22 @@ class FullyConnectedNet(object):
         # Initialize for the input layer
         self.params['W1'] = weight_scale * np.random.randn(input_dim, hidden_dims[0])
         self.params['b1'] = np.zeros(hidden_dims[0])
+        if use_batchnorm:
+            self.params['gamma1'] = np.ones(hidden_dims[0])
+            self.params['beta1'] = np.zeros(hidden_dims[0])
+        
         layer_count = 2
         for i in range(0, len(hidden_dims) - 1):
+            if use_batchnorm:
+                self.params['gamma' + str(layer_count)] = np.ones(hidden_dims[0])
+                self.params['beta' + str(layer_count)] = np.zeros(hidden_dims[0])
             self.params['W' + str(layer_count)] = weight_scale * np.random.randn(hidden_dims[i], hidden_dims[i + 1])
             self.params['b' + str(layer_count)] = np.zeros(hidden_dims[i + 1])
             layer_count += 1
         # Initialize for the ouput layer
         self.params['W' + str(layer_count)] = weight_scale * np.random.randn(hidden_dims[-1], num_classes)    
         self.params['b' + str(layer_count)] = np.zeros(num_classes)
+
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -258,14 +266,25 @@ class FullyConnectedNet(object):
         # layer, etc.                                                              #
         ############################################################################
         caches = []
-        # Affine the first input layer first
+        dropout_caches = []
         input_layer = X.copy()
+        
         for i in range(1, self.num_layers):
-            temp = affine_relu_forward(input_layer, self.params['W' + str(i)], 
-                                                     self.params['b' + str(i)])
-            input_layer = temp[0]
+            if self.use_batchnorm:
+                temp = affine_bn_relu_forward(input_layer ,self.params['W' + str(i)], self.params['b' + str(i)], 
+                                                 self.params['gamma' + str(i)], self.params['beta' + str(i)], self.bn_params[i - 1])
+            else:
+                temp = affine_relu_forward(input_layer, self.params['W' + str(i)], 
+                                                        self.params['b' + str(i)])
             caches.append(temp[1])
-        # Last layer does not need ReLU
+            
+            if self.use_dropout:
+                temp = dropout_forward(temp[0], self.dropout_param)
+                dropout_caches.append(temp[1]) # append dropout num_layers - 1 times
+            
+            input_layer = temp[0]
+        
+        # Last layer does not need ReLU / batchnorm / dropout
         temp = affine_forward(input_layer, self.params['W' + str(self.num_layers)], 
                                                  self.params['b' + str(self.num_layers)])
         scores = temp[0]
@@ -310,8 +329,14 @@ class FullyConnectedNet(object):
         # Backpropagate last layer first
         d_hidden, grads['W' + str(self.num_layers)], grads['b' + str(self.num_layers)] = affine_backward(d_hidden, caches[-1])
         grads['W' + str(self.num_layers)] += self.reg * self.params['W' + str(self.num_layers)]
+        # loop num_layers - 1 times again
         for i in range(self.num_layers - 1, 0, -1):
-            d_hidden, grads['W' + str(i)], grads['b' + str(i)] = affine_relu_backward(d_hidden, caches[i - 1])
+            if self.use_dropout:
+                d_hidden = dropout_backward(d_hidden, dropout_caches[i - 1])
+            if self.use_batchnorm:
+                d_hidden, grads['W' + str(i)], grads['b' + str(i)], grads['gamma' + str(i)], grads['beta' + str(i)] = affine_bn_relu_backward(d_hidden, caches[i - 1])
+            else:
+                d_hidden, grads['W' + str(i)], grads['b' + str(i)] = affine_relu_backward(d_hidden, caches[i - 1])
             grads['W' + str(i)] += self.reg * self.params['W' + str(i)]
         ############################################################################
         #                             END OF YOUR CODE                             #
