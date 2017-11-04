@@ -137,7 +137,25 @@ class CaptioningRNN(object):
         # defined above to store loss and gradients; grads[k] should give the      #
         # gradients for self.params[k].                                            #
         ############################################################################
-        pass
+        # (1)
+        out_affine, cache_affine = affine_forward(features, W_proj, b_proj)
+        # (2)
+        out_embedding, cache_embedding = word_embedding_forward(captions_in, W_embed)
+        # (3)
+        if self.cell_type == 'rnn':
+            out_rnn, cache_rnn = rnn_forward(out_embedding, out_affine, Wx, Wh, b)
+        elif self.cell_type == 'lstm':
+            out_rnn, cache_rnn = lstm_forward(out_embedding, out_affine, Wx, Wh, b)
+        out_temporal, cache_temporal = temporal_affine_forward(out_rnn, W_vocab, b_vocab)
+        loss, d_temporal = temporal_softmax_loss(out_temporal, captions_out, mask, verbose=False)
+
+        d_out_temporal, grads['W_vocab'], grads['b_vocab'] = temporal_affine_backward(d_temporal, cache_temporal)
+        if self.cell_type == 'rnn':
+            d_embedding, d_affine, grads['Wx'], grads['Wh'], grads['b'] = rnn_backward(d_out_temporal, cache_rnn)
+        elif self.cell_type == 'lstm':
+            d_embedding, d_affine, grads['Wx'], grads['Wh'], grads['b'] = lstm_backward(d_out_temporal, cache_rnn)
+        grads['W_embed'] = word_embedding_backward(d_embedding, cache_embedding)
+        _, grads['W_proj'], grads['b_proj'] = affine_backward(d_affine, cache_affine)
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -199,7 +217,19 @@ class CaptioningRNN(object):
         # functions; you'll need to call rnn_step_forward or lstm_step_forward in #
         # a loop.                                                                 #
         ###########################################################################
-        pass
+        D = features.shape[1]
+        out_affine, cache_affine = affine_forward(features, W_proj, b_proj)
+        # captions[:,0] = self._start # not sure about this
+        prev_h = out_affine
+        prev_idx = [self._start] * N
+        for i in range(1, max_length):
+            out_embedding = W_embed[prev_idx]
+            if self.cell_type == 'rnn':
+                next_h, cache_h = rnn_step_forward(out_embedding, prev_h, Wx, Wh, b)
+            out_score, cache_score = affine_forward(next_h, W_vocab, b_vocab)
+            captions[:, i - 1] = np.argmax(out_score, axis = 1)
+            prev_h = next_h
+            prev_idx = captions[:, i - 1]
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
