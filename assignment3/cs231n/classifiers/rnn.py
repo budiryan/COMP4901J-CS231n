@@ -222,10 +222,16 @@ class CaptioningRNN(object):
         # captions[:,0] = self._start # not sure about this
         prev_h = out_affine
         prev_idx = [self._start] * N
+
+        # LSTM cell state
+        prev_c = np.zeros_like(prev_h)
         for i in range(1, max_length):
             out_embedding = W_embed[prev_idx]
             if self.cell_type == 'rnn':
-                next_h, cache_h = rnn_step_forward(out_embedding, prev_h, Wx, Wh, b)
+                next_h, _ = rnn_step_forward(out_embedding, prev_h, Wx, Wh, b)
+            elif self.cell_type == 'lstm':
+                next_h, next_c, _ = lstm_step_forward(out_embedding, prev_h, prev_c, Wx, Wh, b)
+                prev_c = next_c
             out_score, cache_score = affine_forward(next_h, W_vocab, b_vocab)
             captions[:, i - 1] = np.argmax(out_score, axis = 1)
             prev_h = next_h
