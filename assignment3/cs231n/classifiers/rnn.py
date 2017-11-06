@@ -219,7 +219,7 @@ class CaptioningRNN(object):
         ###########################################################################
         D = features.shape[1]
         out_affine, cache_affine = affine_forward(features, W_proj, b_proj)
-        # captions[:,0] = self._start # not sure about this
+        captions[:,0] = self._start # not sure about this
         prev_h = out_affine
         prev_idx = [self._start] * N
 
@@ -233,7 +233,7 @@ class CaptioningRNN(object):
                 next_h, next_c, _ = lstm_step_forward(out_embedding, prev_h, prev_c, Wx, Wh, b)
                 prev_c = next_c
             out_score, cache_score = affine_forward(next_h, W_vocab, b_vocab)
-            captions[:, i - 1] = np.argmax(out_score, axis = 1)
+            captions[:, i] = np.argmax(out_score, axis = 1)
             prev_h = next_h
             prev_idx = captions[:, i - 1]
         ############################################################################
