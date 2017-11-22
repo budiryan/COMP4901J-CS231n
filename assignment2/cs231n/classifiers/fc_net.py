@@ -199,8 +199,8 @@ class FullyConnectedNet(object):
         layer_count = 2
         for i in range(0, len(hidden_dims) - 1):
             if use_batchnorm:
-                self.params['gamma' + str(layer_count)] = np.ones(hidden_dims[0])
-                self.params['beta' + str(layer_count)] = np.zeros(hidden_dims[0])
+                self.params['gamma' + str(layer_count)] = np.ones(hidden_dims[i + 1])
+                self.params['beta' + str(layer_count)] = np.zeros(hidden_dims[i + 1])
             self.params['W' + str(layer_count)] = weight_scale * np.random.randn(hidden_dims[i], hidden_dims[i + 1])
             self.params['b' + str(layer_count)] = np.zeros(hidden_dims[i + 1])
             layer_count += 1
@@ -312,19 +312,20 @@ class FullyConnectedNet(object):
         # of 0.5 to simplify the expression for the gradient.                      #
         ############################################################################
         # Calculating loss
-        num_train = X.shape[0]
-        correct_scores = scores[range(num_train), y]
-        denominators = np.sum(np.exp(scores), axis=1)
-        loss = np.sum(-1 * np.log(np.exp(correct_scores) / denominators)) / num_train
+        #num_train = X.shape[0]
+        # correct_scores = scores[range(num_train), y]
+        # denominators = np.sum(np.exp(scores), axis=1)
+        #loss = np.sum(-1 * np.log(np.exp(correct_scores) / denominators)) / num_train
+        loss, d_hidden = softmax_loss(scores, y)
         for i in range(1, self.num_layers + 1):
             loss += 0.5 * self.reg * np.sum(self.params['W' + str(i)] * self.params['W' + str(i)])
 
         # Calculating gradients
-        numerators = np.exp(scores)
-        d_output = numerators / denominators[:, np.newaxis]
-        d_output[range(num_train), y] -= 1
-        d_output /= num_train
-        d_hidden = d_output
+        # numerators = np.exp(scores)
+        # d_output = numerators / denominators[:, np.newaxis]
+        # d_output[range(num_train), y] -= 1
+        # d_output /= num_train
+        # d_hidden = d_output
 
         # Backpropagate last layer first
         d_hidden, grads['W' + str(self.num_layers)], grads['b' + str(self.num_layers)] = affine_backward(d_hidden, caches[-1])
