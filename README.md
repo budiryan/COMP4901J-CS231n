@@ -1,5 +1,5 @@
 # COMP4901J / CS231n
- COMP4901J: Deep Learning in Computer Vision (a HKUST course). The assignments (except assignment 4) is heavily copied or adapted from Stanford's CS231n (Convolutional Neural Networks for Visual Recognition).
+ COMP4901J: Deep Learning in Computer Vision (a HKUST course). The assignments (except assignment 4) are heavily copied or adapted from Stanford's CS231n (Convolutional Neural Networks for Visual Recognition).
  
 ## Assignment 1: Image Classification, kNN, SVM, Softmax, Neural Network
 - Q1: <a href="https://github.com/budiryan/COMP4901J/blob/master/assignment1/knn.ipynb">k-Nearest Neighbor classifier</a>
